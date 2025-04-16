@@ -165,18 +165,32 @@ def processed_data_testing(create_set_prediction_testing):
     Fixture for time-delayed data ready for model training
     """
     train_df, val_df, test_df = create_set_prediction_testing
-    test_delay = delay_length[0]
+    test_delay = 5
+    models = ['ANN', 'CNN', 'LSTM']
+    sets = {'train': train_df,
+            'val': val_df,
+            'test': test_df
+            }
+    data = {'delay': test_delay}
 
-    x_train, y_train = time_delay(train_df, omni_param, auroral_index, test_delay, type_model, 'train')
-    x_val, y_val = time_delay(val_df, omni_param, auroral_index, test_delay, type_model, 'val')
-    x_test, y_test, test_epoch = time_delay(test_df, omni_param, auroral_index, test_delay, type_model, 'test')
+    for model in models:
+        for set_name, df in sets.items():
+            result = time_delay(df, omni_param, auroral_index, test_delay, model, set_name)
 
-    return {
-        "x_train": x_train, "y_train": y_train,
-        "x_val": x_val, "y_val": y_val,
-        "x_test": x_test, "y_test": y_test,
-        "test_epoch": test_epoch, "delay": test_delay
-    }
+            if set_name == 'test':
+                x, y, epoch = result
+                data[f"x_{set_name}_{model}"] = x
+                data[f"y_{set_name}_{model}"] = y
+                data[f"test_epoch_{model}"] = epoch
+            
+            else:
+                x, y = result
+                data[f"x_{set_name}_{model}"] = x
+                data[f"y_{set_name}_{model}"] = y
+
+    return data
+    
+
 
 
 #* Check Artificial Data Structure
@@ -284,36 +298,42 @@ def test_time_delay(processed_data_testing):
     """
     Check time delay function
     """
-    x_train, y_train = processed_data_testing['x_train'], processed_data_testing['y_train']
-    X_val, y_val = processed_data_testing['x_val'], processed_data_testing['y_val']
-    X_test, y_test = processed_data_testing['x_test'], processed_data_testing['y_test']
-    test_epoch = processed_data_testing['test_epoch']
-    test_delay = processed_data_testing['delay']
 
-    if type_model == 'ANN':
-        expected_feature_dim = len(omni_param) * (test_delay + 1)
-        assert x_train.shape[1] == expected_feature_dim, f"ANN feature dimension incorrect: {x_train.shape[1]} vs {expected_feature_dim}"
-        assert x_train.ndim == 2, "ANN inputs should be 2D arrays"
+    models = ['ANN', 'CNN', 'LSTM']
+
+    for model in models:
+        print(model)
+        x_train, y_train = processed_data_testing[f'x_train_{model}'], processed_data_testing[f'y_train_{model}']
+        x_val, y_val = processed_data_testing[f'x_val_{model}'], processed_data_testing[f'y_val_{model}']
+        x_test, y_test = processed_data_testing[f'x_test_{model}'], processed_data_testing[f'y_test_{model}']
+        test_epoch = processed_data_testing[f'test_epoch_{model}']
+        test_delay = processed_data_testing['delay']
+        print(x_train.shape)
+
+        if model == 'ANN':
+            expected_feature_dim = len(omni_param) * (test_delay + 1)
+            assert x_train.shape[1] == expected_feature_dim, f"ANN feature dimension incorrect: {x_train.shape[1]} vs {expected_feature_dim}"
+            assert x_train.ndim == 2, "ANN inputs should be 2D arrays"
         
-    elif type_model == 'LSTM':
-        assert x_train.ndim == 3, "LSTM inputs should be 3D arrays (batch, seq_len, features)"
-        assert x_train.shape[2] == len(omni_param), f"LSTM feature dimension incorrect: {x_train.shape[2]} vs {len(omni_param)}"
-        assert x_train.shape[1] == test_delay, f"LSTM sequence length incorrect: {x_train.shape[1]} vs {test_delay}"
+        elif model == 'LSTM':
+            assert x_train.ndim == 3, "LSTM inputs should be 3D arrays (batch, seq_len, features)"
+            assert x_train.shape[2] == len(omni_param), f"LSTM feature dimension incorrect: {x_train.shape[2]} vs {len(omni_param)}"
+            assert x_train.shape[1] == test_delay, f"LSTM sequence length incorrect: {x_train.shape[1]} vs {test_delay}"
         
-    elif type_model == 'CNN':
-        assert x_train.ndim == 3, "CNN inputs should be 3D arrays (batch, features, seq_len)"
-        assert x_train.shape[1] == len(omni_param), f"CNN channel dimension incorrect: {x_train.shape[1]} vs {len(omni_param)}"
-        assert x_train.shape[2] == test_delay, f"CNN sequence length incorrect: {x_train.shape[2]} vs {test_delay}"
+        elif model == 'CNN':
+            assert x_train.ndim == 3, "CNN inputs should be 3D arrays (batch, features, seq_len)"
+            assert x_train.shape[1] == len(omni_param), f"CNN channel dimension incorrect: {x_train.shape[1]} vs {len(omni_param)}"
+            assert x_train.shape[2] == test_delay, f"CNN sequence length incorrect: {x_train.shape[2]} vs {test_delay}"
 
-    assert y_train.ndim <= 2, "Target should be 1D or 2D"
-    if y_train.ndim == 2:
-        assert y_train.shape[1] == 1, "Target should have shape (n_samples, 1) if 2D"
+        assert y_train.ndim <= 2, "Target should be 1D or 2D"
+        if y_train.ndim == 2:
+            assert y_train.shape[1] == 1, "Target should have shape (n_samples, 1) if 2D"
 
-    assert len(x_train) == len(y_train), f"Train features and targets misaligned: {len(x_train)} vs {len(y_train)}"
-    assert len(X_val) == len(y_val), f"Validation features and targets misaligned: {len(X_val)} vs {len(y_val)}"
-    assert len(X_test) == len(y_test), f"Test features and targets misaligned: {len(X_test)} vs {len(y_test)}"
+        assert len(x_train) == len(y_train), f"Train features and targets misaligned: {len(x_train)} vs {len(y_train)}"
+        assert len(x_val) == len(y_val), f"Validation features and targets misaligned: {len(x_val)} vs {len(y_val)}"
+        assert len(x_test) == len(y_test), f"Test features and targets misaligned: {len(x_test)} vs {len(y_test)}"
     
-    assert len(test_epoch) == len(X_test), f"Test epochs and features misaligned: {len(test_epoch)} vs {len(X_test)}"
+        assert len(test_epoch) == len(x_test), f"Test {model} epochs and features misaligned: {len(test_epoch)} vs {len(x_test)}"
 
 
 #* Check DataTorch
@@ -321,26 +341,28 @@ def test_DataTorch(processed_data_testing):
     """
     Check DataTorch class and DataLoader functionality
     """
-    x_train, y_train = processed_data_testing['x_train'], processed_data_testing['y_train']
+    models = ['ANN', 'CNN', 'LSTM']
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    train_dataset = DataTorch(x_train, y_train, device)
-    assert len(train_dataset) == len(x_train), f"Dataset length incorrect: {len(train_dataset)} vs {len(x_train)}"
+    for model in models:
+        x_train, y_train = processed_data_testing[f'x_train_{model}'], processed_data_testing[f'y_train_{model}']
 
-    x, y = train_dataset[0]
-    assert isinstance(x, torch.Tensor), "Dataset should return torch.Tensor for features"
-    assert isinstance(y, torch.Tensor), "Dataset should return torch.Tensor for targets"
-    assert x.device.type == device, f"Tensor should be on {device}, but is on {x.device.type}"
+        train_dataset = DataTorch(x_train, y_train, device)
+        assert len(train_dataset) == len(x_train), f"Dataset length incorrect: {len(train_dataset)} vs {len(x_train)}"
 
-    batch_size = min(batch_train, 32, len(train_dataset))
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        x, y = train_dataset[0]
+        assert isinstance(x, torch.Tensor), "Dataset should return torch.Tensor for features"
+        assert isinstance(y, torch.Tensor), "Dataset should return torch.Tensor for targets"
+        assert x.device.type == device, f"Tensor should be on {device}, but is on {x.device.type}"
 
-    for batch_x, batch_y in train_loader:
-        assert isinstance(batch_x, torch.Tensor), "DataLoader should yield torch.Tensor batches"
-        assert batch_x.shape[0] <= batch_size, f"Batch size incorrect: {batch_x.shape[0]} vs {batch_size}"
-        assert batch_x.dtype == torch.float32, f"Features should be float32, got {batch_x.dtype}"
-        assert batch_y.dtype == torch.float32, f"Targets should be float32, got {batch_y.dtype}"
-        break  
+        train_loader = DataLoader(train_dataset, batch_size = batch_train, shuffle = True)
+
+        for batch_x, batch_y in train_loader:
+            assert isinstance(batch_x, torch.Tensor), "DataLoader should yield torch.Tensor batches"
+            assert batch_x.shape[0] <= batch_train, f"Batch size incorrect: {batch_x.shape[0]} vs {batch_train}"
+            assert batch_x.dtype == torch.float32, f"Features should be float32, got {batch_x.dtype}"
+            assert batch_y.dtype == torch.float32, f"Targets should be float32, got {batch_y.dtype}"
+            break  
 
 
 if __name__ == "__main__":

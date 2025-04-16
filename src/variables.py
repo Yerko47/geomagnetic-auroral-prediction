@@ -8,11 +8,11 @@ out_year = 2018
 
 
 #* AURORAL ELECTROJET INDEX
-auroral_index = "AE_INDEX"                  # AE_INDEX    |    AL_INDEX    |    AU_INDEX
+auroral_index = "AU_INDEX"                  # AE_INDEX    |    AL_INDEX    |    AU_INDEX
 
 
 #* SPLIT TRAIN/VAL/TEST SET
-set_split = "organized"                     # organized --> Temporary order    |    random --> Stratified random split
+set_split = "random"                     # organized --> Temporary order    |    random --> Stratified random split
 
 test_size = 0.2
 val_size = 0.2
@@ -41,7 +41,7 @@ auroral_param = ['AE_INDEX',
 
 
 #* NEURAL NETWORK GENERAL PARAMETERS
-type_model = "CNN"                       # ANN    |    LSTM    |    CNN    |    etc...
+type_model = "LSTM"                       # ANN    |    LSTM    |    CNN    |    etc...
 scaler = "robust"                         # robust --> RobustScaler()    |   standard --> StandardScaler()    |   minmax --> MinMaxScaler()
 delay_length = [30, 40, 50, 60]
 

@@ -2,6 +2,7 @@
 Code for selection and training model        # 
 """
 
+import os
 import numpy as np
 import pandas as pd
 from copy import deepcopy
@@ -192,7 +193,8 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH,
             best_model_wts = deepcopy(model.state_dict())
             if model_file:
                 torch.save(best_model_wts, 
-                         f"{model_file}{type_model}_{auroral_index}_delay_{delay}.pt")
+                           os.path.join(model_file, f"{type_model}_{auroral_index}_delay_{delay}.pt")
+                           )
             
 
         for metric, value in zip(['rmse', 'r'], train_metrics) :        # Update metrics history
@@ -222,7 +224,7 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH,
 
 
 #* Test Model
-def test_model(model, criterion, test_loader, model_file, type_model, auroral_index, delay, test_epoch, device) :
+def model_testing(model, criterion, test_loader, model_file, type_model, auroral_index, delay, test_epoch, device) :
     """
     Function to evaluate a neural network model using a test dataset.
 
@@ -244,9 +246,9 @@ def test_model(model, criterion, test_loader, model_file, type_model, auroral_in
     """
     
     model.load_state_dict(torch.load(
-        f"{model_file}{type_model}_{auroral_index}_delay_{delay}.pt",
-        map_location=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    ))
+        os.path.join(model_file, f"{type_model}_{auroral_index}_delay_{delay}.pt"),
+                     map_location = torch.device('cuda' if torch.cuda.is_available() else 'cpu')))
+    
     model = model.to(device)
     model.eval()
 

@@ -66,7 +66,7 @@ def bad_data(cdf_df):
         if cols == 'Epoch' or cdf_df[cols].dtype == 'datetime64[ns]':        # Ignores temporary values
             continue
 
-        max_value = int(processed_df[cols].max() * 100) / 100        # Calculate the maximum value and round it to two decimal places
+        max_value = np.floor(processed_df[cols].max() * 100) / 100        # Calculate the maximum value and round it to two decimal places
         processed_df.loc[processed_df[cols] >= max_value, cols] = np.nan        # Replace values greater than or equal to the maximum value with NaN
 
         processed_df[cols] = processed_df[cols].interpolate(method = 'linear')        # A linear interpolation is performed
@@ -245,11 +245,6 @@ def create_set_prediction(df, set_split, test_size, val_size):
 
         case _: raise ValueError('Set_split must be "organized" or "random"')
 
-    print('---------- [ Percentage of sets ]----------\n')
-    print(f'Training: {round(len(train_df) / len(df), 2) * 100}%')
-    print(f'Validation: {round(len(val_df) / len(df), 2) * 100}%')
-    print(f'Testing: {round(len(test_df) / len(df), 2) * 100}%\n')
-
     return train_df, val_df, test_df
     
 
@@ -277,6 +272,7 @@ def time_delay(df, omni_param, auroral_index, delay, type_model, group):
     df_solar = df[omni_param].copy()        # Targets
     df_index = df[auroral_index].copy().abs()        # Features
     np_index = df_index.to_numpy()
+    df_epoch = None
 
     if type_model == 'ANN':
         delay_columns = []
@@ -291,19 +287,30 @@ def time_delay(df, omni_param, auroral_index, delay, type_model, group):
         np_solar = df_solar.values
         np_index = np_index[delay:]
 
-    elif type_model in ['LSTM', 'CNN']:
-        sequence = [df_solar.iloc[i:i + delay].values 
-                    for i in range(len(df_solar) - delay + 1)]        # Generation of time sequences
-        
+        if group == 'test':
+            df_epoch = df['Epoch'].iloc[delay:].reset_index(drop=True).copy()
+
+
+    elif type_model == 'LSTM':
+        sequence = [df_solar.iloc[i : i + delay].values for i in range(len(df_solar) - delay + 1)]        # Generation of time sequences
         np_solar = np.array(sequence, dtype=np.float32)        # Reduce memory use
         np_index = np_index[delay - 1:]        # Target alignment
 
-        if type_model == 'CNN':
-            np_solar = np.transpose(np_solar, (0, 2, 1))
+        if group == 'test':
+            df_epoch = df['Epoch'].iloc[delay - 1:].reset_index(drop=True).copy()        # Time data
 
+
+    elif type_model == 'CNN':
+        sequence = [df_solar.iloc[i : i + delay].values for i in range(len(df_solar) - delay + 1)]
+        np_solar = np.array(sequence, dtype=np.float32)
+        np_solar = np.transpose(np_solar, (0, 2, 1))
+        np_index = np_index[delay - 1:]
+
+
+        if group == 'test':
+            df_epoch = df['Epoch'].iloc[delay - 1:].reset_index(drop=True).copy()        # Time data
 
     if group == 'test':
-        df_epoch = df['Epoch'].iloc[delay - 1:].reset_index(drop=True)        # Time data
         return np_solar, np_index, df_epoch
     else:
         return np_solar, np_index
@@ -326,17 +333,18 @@ class DataTorch(Dataset):
 
     """
     def __init__(self, solar_wind, index, device):
+        
         self.device = device       # Save device info
 
-        self.x = solar_wind         # Convert and move features to device
-        self.y = index        # Convert and move targets to device (ensuring the shape [n_samples, 1])
+        self.x = torch.tensor(solar_wind, dtype=torch.float32).to(self.device)         # Convert and move features to device
+        self.y = torch.tensor(index, dtype=torch.float32).unsqueeze(1).to(self.device)        # Convert and move targets to device (ensuring the shape [n_samples, 1])
 
     def __len__(self) -> int:        # Return the number of samples in the dataset
         return(len(self.x))
     
-    def __getitem__(self, idx : int) -> tuple [torch.Tensor, torch.Tensor]:        # Identify the value according to the index in the dimension
-        x = torch.tensor(self.x[idx], dtype=torch.float32).to(self.device)
-        y = torch.tensor(self.y[idx], dtype=torch.float32).unsqueeze(0).to(self.device)
+    def __getitem__(self, idx):        # Identify the value according to the index in the dimension
+        x = self.x[idx]
+        y = self.y[idx]
 
         return x, y
 

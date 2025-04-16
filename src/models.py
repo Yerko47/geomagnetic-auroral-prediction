@@ -89,7 +89,10 @@ class ResBlock(nn.Module):
         )
 
     def forward(self, x):
-        return self.layer1(x) + self.layer2(x)  
+        x1 = self.layer1(x)
+        x2 = self.layer2(x1)
+
+        return x1 + x2
     
 
 class CNN(nn.Module):
@@ -107,13 +110,13 @@ class CNN(nn.Module):
             nn.Dropout(drop),
             
             ResBlock(128, 256, kernel_cnn, pad),      
-            nn.MaxPool1d(2, 2),
+            nn.AdaptiveMaxPool1d(1),
             nn.Dropout(drop)
         )
 
         self.fc = nn.Sequential(
             nn.Dropout(drop),
-            nn.Linear(256, 128),
+            nn.Linear(256 + input_size, 128),
             nn.ReLU(),
             nn.Dropout(drop),
             nn.Linear(128, 64),
@@ -131,8 +134,7 @@ class CNN(nn.Module):
         x = x.mean(-1)
         x = torch.cat([x, x_last], dim = 1)
         x = self.fc(x)
-        x[:, -1] += x[:, 0]
-
+        
         return x
 
 
