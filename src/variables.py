@@ -8,7 +8,7 @@ out_year = 2018
 
 
 #* AURORAL ELECTROJET INDEX
-auroral_index = "AU_INDEX"                  # AE_INDEX    |    AL_INDEX    |    AU_INDEX
+auroral_index = "AL_INDEX"                  # AE_INDEX    |    AL_INDEX    |    AU_INDEX
 
 
 #* SPLIT TRAIN/VAL/TEST SET
@@ -62,21 +62,43 @@ patience_schler = 50
 
 # NN particular parameters
 num_layer_lstm = 1
-kernel_cnn = 7
+kernel_cnn = 7 
 
 project_file = f'/home/yerko/Desktop/Projects/auroral_prediction/'
-omni_file = f'/data/omni/hro_1min/'
-
+omni_files = f'/data/omni/hro_1min/'
+ 
 files = ['data/raw/', 'data/processed/',
         'models/', 'notebooks/',
         'src/', 'tests/', 'docs/', 
         'plots/']
+
+files_plots = ['historic/index/', 'historic/solar/', 'stadistics/correlation/',
+               'stadistics/others/', 'training/loss/', 'training/r_score/',
+               'test_plot/metrics/loss/', 'test_plot/metrics/r_score/', 
+               'test_plot/density/', 'test_plot/date/', 'comparison/', 
+               'gifs/']
 
 raw_file = project_file + files[0]
 processed_file = project_file + files[1]
 model_file = project_file + files[2]
 test_file = project_file + files[5]
 plots_file = project_file + project_file[6]
+
+auroral_historic_file = project_file + files_plots[0]
+solar_historic_file = project_file + files_plots[1]
+corr_file = project_file + files_plots[2]
+train_loss_file = project_file + files_plots[4]
+train_r_score_file = project_file + files_plots[5]
+test_loss_file = project_file + files_plots[6]
+test_r_score_file = project_file + files_plots[7]
+test_density_file = project_file + files_plots[8]
+test_date_file = project_file + files_plots[9]
+comparison_file = project_file + files_plots[10]
+gifs_file = project_file + files_plots[11]
+
+
+
+
 
 
 processOMNI = True

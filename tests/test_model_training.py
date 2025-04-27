@@ -222,6 +222,11 @@ def test_model_testing(processed_data_testing, DataTorch_testing, model_folder):
         assert 'Test_RMSE' in metrics_df.columns, "Test metrics should include RMSE"
         assert 'Test_R' in metrics_df.columns, "Test metrics should include R"
 
+        if auroral_index == 'AL_INDEX':
+            assert (result_df['Real'].values < 1).all() and (result_df['Pred'].values < 1).all(), "AL_INDEX values should be less than 1"
+        else:
+            assert (result_df['Real'].values > 1).all() and (result_df['Pred'].values > 1).all(), "AE_INDEX values should be greater than 1"
+
 
 
 if __name__ == "__main__":

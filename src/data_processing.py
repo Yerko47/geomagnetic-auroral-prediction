@@ -16,16 +16,18 @@ from torch.utils.data import Dataset, DataLoader
 #* READ CDF
 def cdf_read(file):
     """
-    Loads CDF (Common Data Format) files and converts them to a DataFrame.
-    This function opens a CDF file, extracts all variables, converts to time in the 'Epoch' column to a readable format, and rename some columns to improve the clarity.
-    The result is a DataFrame ready for analysis.
+    Loads CDF (Common Data Format) files and converts them into a DataFrame.
 
-    Args:
-        - fike (str): Path of the CDF file you want to load.
+    This function opens a CDF file, extracts all variables, converts the 'Epoch' column to a readable time format, 
+    and renames some columns for clarity. The result is a DataFrame ready for analysis.
 
-    Return:
-        - cdf_df (pd.Dataframe): A DataFrame containing the data from the CDF file.
-        
+    Args
+        file : str
+            Path to the CDF file to be loaded.
+
+    Returns
+        cdf_df : pd.DataFrame
+            DataFrame containing the data from the CDF file.
     """
 
     cdf = cdflib.CDF(file)        # Open CDF file
@@ -49,15 +51,19 @@ def cdf_read(file):
 #* DATA CLEANING
 def bad_data(cdf_df):
     """
-    Replaces erroneous values (maximum values) in each column of the DataFrame with NaN.
-    This function iterates over the columns of the DataFrame, excluding the temporary column. To do this, it calculates the maximum value, rounds it to two decimal places, and replaces all values greater than or equal to this value with NaN and interpolated.
+    Replaces erroneous maximum values in each column of the DataFrame with NaN and interpolates the result.
 
-    Args:
-        - df (pd.DataFrame): The DataFrame containing the data to be processed.
+    This function iterates over the columns of the DataFrame (excluding the temporary column), 
+    computes the maximum value, rounds it to two decimal places, and replaces all values greater than 
+    or equal to this maximum with NaN. The resulting missing values are then interpolated.
 
-    Return:
-        - processed_df (pd.DataFrame): The modified DataFrame with erroneous values replaced by the interpolation
+    Args
+        df : pd.DataFrame
+            DataFrame containing the data to be processed.
 
+    Returns
+        processed_df : pd.DataFrame
+            Modified DataFrame with erroneous values replaced by interpolated values.
     """
 
     processed_df = cdf_df.copy()
@@ -78,18 +84,23 @@ def bad_data(cdf_df):
 #* DATASET BUILDING
 def dataset(in_year, out_year, omni_file, raw_file, processOMNI):
     """
-    Code responsible for creating a database by applying previosly dfined function to process and clean data.
+    Creates a database by applying previously defined functions to process and clean space weather data.
 
-    Args:
-        - in_year (int): The starting year 
-        - out_year (int): The ending year
-        - omni_file (str): Address where the omni data
-        - raw_file (str): Address where the raw files are saved
-        - processOMNI (bool): Check if you want to perform this process or not
+    Args
+        in_year : int
+            The starting year for data processing.
+        out_year : int
+            The ending year for data processing.
+        omni_file : str
+            Path to the directory containing OMNI data files.
+        raw_file : str
+            Path to the directory containing raw data files.
+        processOMNI : bool
+            Whether to process the OMNI data (True) or skip this step (False).
 
-    Return:
-        - df_omni (pd.Pandas): DataFrame with all correct values
-
+    Returns
+        df_omni : pd.DataFrame
+            Cleaned and processed DataFrame containing the relevant OMNI data.
     """
 
     start_time = pd.Timestamp(in_year, 1 ,1)
@@ -140,16 +151,19 @@ def dataset(in_year, out_year, omni_file, raw_file, processOMNI):
 #* STORM SELECTION
 def storm_selection(df, processed_file):
     """
-    Extracts 48-hours time windows around storm events from a time series dataset for focused analysis.
-    Processes OMNI-like space weather data by isolating critical periods around storm events, enabling detailed study of pre-storm, storm peak, and post-storm conditions. 
+    Extracts 48-hour time windows around storm events from a time series dataset for focused analysis.
+    Processes OMNI-like space weather data by isolating critical periods around storm events, 
+    enabling detailed study of pre-storm, storm peak, and post-storm conditions.
 
-    Args:
-        - df (pd.DataFrame): Input time serie data containing Epoch column (Timestamps in ISO/OMNI format)
-        - processed_file (str): Path to the directory containing 'storm_list.csv'
+    Args
+        df : pd.DataFrame
+            Input time series data containing an 'Epoch' column with timestamps in ISO/OMNI format.
+        processed_file : str
+            Path to the directory containing the 'storm_list.csv' file.
 
-    Return:
-        - df_storm (pd.DataFrame): Storm data with continuous 48-hour segments for each storm.
-
+    Returns
+        df_storm : pd.DataFrame
+            Subset of the dataset containing continuous 48-hour segments for each storm event.
     """
     
     df['Epoch'] = pd.to_datetime(df['Epoch'])
@@ -176,22 +190,37 @@ def storm_selection(df, processed_file):
 #* SCALER DATASET
 def scaler_df(df, scaler_type, auroral_param, omni_param):
     """
-    This function applies a specified scaling method to the solar parameters in the DataSet.
+    Scales the solar parameters in the dataset using the specified scaling method.
+    The scaling methods available are 'robust', 'standard', and 'minmax'.
+    The function also handles the inversion of the auroral index (AL_INDEX) to ensure that
+    negative values are represented as positive in the scaled dataset.
 
-    Args:
-        - df (pd.DataFrame): Dataset with storm selection
-        - scaler_type (str): The scaling method to apply ('robust', 'standard', 'minmax')
-        - auroral_param (str): Matrix containing the indices to be predicted
-        - omni_param (str): Matrix containing the solar parameters to use
 
-    Return:
-        - df (pd.DataFrame): Dataset with scaling in solar parameters
+    Args
+        df : pd.DataFrame
+            Dataset with storm selection.
+        scaler_type : str
+            The scaling method to apply. Options are 'robust', 'standard', or 'minmax'.
+        auroral_param : str
+            Name of the column or key representing the indices to be predicted.
+        omni_param : str
+            Name of the column or key representing the solar parameters to scale.
 
+    Returns
+        df : pd.DataFrame
+            Dataset with the solar parameters scaled according to the selected method.
     """
+
 
     df_epoch = df[['Epoch']]
     df_index = df[auroral_param + ['SYM_D', 'SYM_H']]
     df_solar = df[omni_param]       # Solar parameters to scale
+
+    for cols in df_index.columns:
+        if cols == 'AL_INDEX':
+            df_index[cols] = -1 * df_index[cols]   
+        break     
+        
 
     match scaler_type:
         case 'robust': scaler = RobustScaler()        # Robustness to outliers (using medians and quantiles)
@@ -210,19 +239,26 @@ def scaler_df(df, scaler_type, auroral_param, omni_param):
 #* SET PREDICTION
 def create_set_prediction(df, set_split, test_size, val_size):
     """
-    Splits a dataset into training, validation, and test sets for predictive modeling, supporting two splitting strategies: organized (temporal) and random.
+    Splits a dataset into training, validation, and test sets for predictive modeling. 
+    Supports two splitting strategies: organized (temporal) and random.
 
-    Args:
-        - df (pd.DataFrame): Scaled and temporally ordered DataSet 
-        - set_split (str): Split method ('organized' or 'random')
-        - test_size (float): Test set proportion
-        - val_size (float): Validation set proportion
-    
-    Return:
-        - train_df (pd.DataFrame): Training data
-        - val_df (pd.DataFrame): Validation data
-        - test_df (pd.DataFrame): Testing data
+    Args
+        df : pd.DataFrame
+            Scaled and temporally ordered dataset.
+        set_split : str
+            Split method to use. Options are 'organized' (temporal order) or 'random' (shuffled).
+        test_size : float
+            Proportion of the dataset to allocate to the test set.
+        val_size : float
+            Proportion of the dataset to allocate to the validation set.
 
+    Returns
+        train_df : pd.DataFrame
+            Training data.
+        val_df : pd.DataFrame
+            Validation data.
+        test_df : pd.DataFrame
+            Testing data.
     """
 
     match set_split:
@@ -252,21 +288,30 @@ def create_set_prediction(df, set_split, test_size, val_size):
 def time_delay(df, omni_param, auroral_index, delay, type_model, group):
     """
     Prepare temporal data for prediction models by applying delays (lag features) according to the model type.
-    If the model is an ANN (Multilayer Perceptron) it will be [m, n*t], but if it is a recurrent or convolutional neural network it will be [m, [t,n]]
-
-    Args:
-        - df (pd.DataFrame): Input DataFrame with temporary columns.
-        - omni_param (list): Solar parameters 
-        - auroral_index (str): Auroral index to predict
-        - delay (int): Number of time steps to consider (time window)
-        - type_model (str): Model type
-        - group (str): Type of data set to apply the delay (train, val, test)
-
-    Return:
-        - np_solar (np.array): Solar wind feature with delay applied
-        - np_index (np.array): Auroral Index targets
-        - df_epoch (pd.DataFrame): Only if group = 'test' time data is kept
-
+    If the model is an ANN (Multilayer Perceptron), it will be shaped as [m, n*t], 
+    but if it is a recurrent or convolutional neural network, it will be shaped as [m, t, n].
+    
+    Args
+        df : pd.DataFrame
+            Input DataFrame with temporary columns.
+        omni_param : list
+            Solar parameters.
+        auroral_index : str
+            Auroral index to predict.
+        delay : int
+            Number of time steps to consider (time window).
+        type_model : str
+            Model type.
+        group : str
+            Type of data set to apply the delay (train, val, test).
+    
+    Returns
+        np_solar : np.array
+            Solar wind features with delay applied.
+        np_index : np.array
+            Auroral index targets.
+        df_epoch : pd.DataFrame
+            Only returned if group='test'. Contains time data.
     """
 
     df_solar = df[omni_param].copy()        # Targets
@@ -320,18 +365,24 @@ def time_delay(df, omni_param, auroral_index, delay, type_model, group):
 class DataTorch(Dataset):
     """
     A PyTorch Dataset class for handling data with automatic device placement.
-    Provides automatic conversion of tensors to appropriate data types, also has support for GPU/CPU devices and a standardized interface to PyTorch DataLoader.
+    Provides automatic conversion of tensors to appropriate data types, supports GPU/CPU devices, 
+    and offers a standardized interface for PyTorch DataLoader.
 
-    Args:
-        - solar_wind (np.array): Solar wind parameters (features) in numpy array format
-        - index (np.array): Auroral Index parameter (target) in numpy array format
-        - device (str, torch.device): Target device ('cuda', 'mps', 'cpu') for automatic data placement
+    Args
+        solar_wind : np.ndarray
+            Solar wind parameters (features) in NumPy array format.
+        index : np.ndarray
+            Auroral Index parameter (target) in NumPy array format.
+        device : str or torch.device
+            Target device ('cuda', 'mps', 'cpu') for automatic data placement.
 
-    Return:
-        - x_torch (torch.Tensor): Features in torch tensor format
-        - y_torch (torch.Tensor): Target in torch tensor format
-
+    Returns
+        x_torch : torch.Tensor
+            Features converted to torch tensor format and moved to the specified device.
+        y_torch : torch.Tensor
+            Targets converted to torch tensor format and moved to the specified device.
     """
+
     def __init__(self, solar_wind, index, device):
         
         self.device = device       # Save device info

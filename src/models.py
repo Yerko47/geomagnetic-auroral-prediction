@@ -8,15 +8,18 @@ import torch.nn as nn
 #* ANN
 class ANN(nn.Module):
     """
-    A customizable Multilayer Perceptron for regression with Multiple fully-connected layers, batch normalization, dropout regularization and ReLU activation
+    A customizable Multilayer Perceptron (MLP) for regression with multiple fully-connected layers, 
+    batch normalization, dropout regularization, and ReLU activation.
 
-    Args:
-        - input_size (int): Number of input features
-        - drop (float): Dropout probability
+    Args
+        input_size : int
+            Number of input features.
+        drop : float
+            Dropout probability for regularization.
 
-    Returns:
-        - x (torch.Tensor): Output predition of shape [batch_size, 1]
-
+    Returns
+        x : torch.Tensor
+            Output prediction of shape [batch_size, 1].
     """
 
     def __init__(self, input_size, drop):
@@ -143,12 +146,17 @@ class LSTM(nn.Module):
     """
     Hybrid LSTM-GRU model for temporal prediction.
 
-    Args:
-        - input_size (int): Number of input features
-        - drop (float): Dropout probability
-        - n_neurons (int): Base neurons for recurrent layers (default = 192)
-        - delay (int): Number of time steps to consider (time window)
-        - num_layer_lstm (int): Number of recurrent layers
+    Args
+        input_size : int
+            Number of input features.
+        drop : float
+            Dropout probability for regularization.
+        n_neurons : int, optional
+            Base number of neurons for the recurrent layers (default is 192).
+        delay : int
+            Number of time steps to consider (time window).
+        num_layer_lstm : int
+            Number of recurrent layers in the LSTM part of the model.
     """
     def __init__(self, input_size, drop, delay, num_layer_lstm, n_neurons = 192):
         super(LSTM, self).__init__()

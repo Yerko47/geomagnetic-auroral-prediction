@@ -2,19 +2,37 @@
 Script for creating the project structure
 """
 import os
+from variables import *
+from pathlib import Path
 
-def structure_proyect(proyect_file, files):
+def structure_proyect(proyect_file, files_plots, files):
+    """
+    Create the project structure.
+    
+    Args:
+    ----------
+        proyect_file : str
+            Path to the project directory.
+        files_plots : list
+            List of subdirectories for plots.
+        files : list
+            List of subdirectories for the project.
+    """
+    # Create the main project directory
+    os.makedirs(proyect_file, exist_ok=True)
+
+    # Create subdirectories
     for file in files:
-        file_proyect = proyect_file + file
-        if not os.path.exists(file_proyect):
-            os.makedirs(file_proyect)
+        os.makedirs(os.path.join(proyect_file, file), exist_ok=True)
 
-proyect_file = f'/home/yerko/Desktop/Proyects/auroral_prediction/'
-omni_file = f'/data/omni/hro_1min/'
+    # Create subdirectories for plots
+    for file in files_plots:
+        os.makedirs(os.path.join(proyect_file, 'plots', file), exist_ok=True)
+        
 
-files = ['data/raw/', 'data/processed/',
-        'models/', 'notebooks/',
-        'src/', 'tests/', 'docs/', 
-        'plots/']
 
-structure_proyect(proyect_file, files)
+project_file = Path(__file__).resolve().parent.parent
+
+
+
+structure_proyect(project_file, files_plots, files)

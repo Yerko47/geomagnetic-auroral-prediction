@@ -18,20 +18,27 @@ from src.models import ANN, CNN, LSTM
 #* Selection Model
 def type_nn(type_model, x_train, drop, kernel_cnn, num_layer_lstm, delay, device) :
     """
-    Selects and instantiates the specified neural network model, configuring for the execution device (Cuda/CPU/GPU).
+    Selects and instantiates the specified neural network model, configuring it for the execution device (Cuda/CPU/GPU).
 
-    Args:
-        - type_model (str) : Type of model to create
-        - x_train (np.array) : Training data for dimension inference
-        - drop (float) : Dropout probability
-        - kernel_cnn (int) : Kernel size (only CNN)
-        - delay (int) : Time Squance length (Only LSTM)
-        - num_layer_lstm (int) : Number of recurrent layers (Only LSTM)
-        - device (torch.device) : Device where the model will be hosted ('cuda', 'mps', 'cpu').
+    Args
+        type_model : str
+            Type of model to create (e.g., 'ANN', 'CNN', 'LSTM').
+        x_train : np.ndarray
+            Training data used to infer the input dimensions.
+        drop : float
+            Dropout probability to prevent overfitting.
+        kernel_cnn : int
+            Kernel size for convolutional layers (only for CNN models).
+        delay : int
+            Time sequence length (only for LSTM models).
+        num_layer_lstm : int
+            Number of recurrent layers in the LSTM model.
+        device : torch.device
+            Device where the model will be hosted ('cuda', 'mps', 'cpu').
 
-    Return:
-        - model (torch.nn.Module) : Model instantiated and moved to the specified device.
-
+    Returns
+        model : torch.nn.Module
+            Instantiated model moved to the specified device.
     """
 
     match type_model:
@@ -55,16 +62,21 @@ def type_nn(type_model, x_train, drop, kernel_cnn, num_layer_lstm, delay, device
 #* Metrics
 def metrics(real, pred) :
     """
-    Computes regression metrics to compare actual vs. predicted values, handling PyTorch tensors and avoiding device issues.
+    Computes regression metrics to compare actual vs. predicted values, 
+    handling PyTorch tensors and avoiding device-related issues.
 
-    Args:
-        - real (torch.Tensor) : Tensor with the real/target values
-        - pred (torch.Tensor) : Tensor with the model predictions
+    Args
+        real : torch.Tensor
+            Tensor containing the real/target values.
+        pred : torch.Tensor
+            Tensor containing the predicted values from the model.
 
-    Return:
-        - rmse (float) : Root Mean Squared Error
-        - r (float) : Coefficient of determination (ensured >= 0)
-
+    Returns
+        rmse : float
+            Root Mean Squared Error (RMSE) between the actual and predicted values.
+        r : float
+            Coefficient of determination (R²) between the actual and predicted values, 
+            ensured to be >= 0.
     """
 
     real_np = real.detach().cpu().numpy()
@@ -80,11 +92,11 @@ def metrics(real, pred) :
 #* Seed
 def set_seed(s) :
     """
-    Fix all random seeds so that results can be replicated in future runs.
+    Fixes all random seeds to ensure that results can be replicated in future runs.
 
-    Args:
-        - s (int) : Seed value
-
+    Args
+        s : int
+            Seed value to set for all random number generators (e.g., NumPy, PyTorch, random).
     """
     torch.manual_seed(s)
     np.random.seed(s)
@@ -95,29 +107,44 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH,
                 lr, delay, type_model, auroral_index, schler, patience_schler, 
                 device, model_file = None) :
     """
-    Training the PyTorch model with validation evaluation, saving the best model, and tracking metrics.
+    Trains a PyTorch model with validation evaluation, saves the best model, and tracks metrics.
 
-    Args:
-        - model (nn.Module) : Pytorch model to train
-        - criterion (Loss Function) : Loss function
-        - optimizer (str) : Select optimizer
-        - train_loader (DataLoader) : DataLoader for training data
-        - val_loader (DataLoader) : DataLoader for validation data
-        - EPOCH (int) : Total number of training epochs
-        - lr (float) : Initial learning rate
-        - delay (int) : Time delay used in the data
-        - type_model (str) : Architecture type
-        - auroral_index (str) : Target auroral index
-        - schler (str) : Select Scheduler
-        - patience_schler (int) : Patience Scheduler
-        - device (str) : Device to use ('cuda' or 'cpu')
-        - model_file (str) : Base path to save the model
+    Args
+        model : nn.Module
+            PyTorch model to train.
+        criterion : torch.nn.Module
+            Loss function to optimize.
+        optimizer : str
+            Optimizer to use (e.g., 'SGD', 'Adam').
+        train_loader : torch.utils.data.DataLoader
+            DataLoader for the training dataset.
+        val_loader : torch.utils.data.DataLoader
+            DataLoader for the validation dataset.
+        EPOCH : int
+            Total number of training epochs.
+        lr : float
+            Initial learning rate.
+        delay : int
+            Time delay used in the data processing.
+        type_model : str
+            Architecture type of the model (e.g., 'CNN', 'LSTM').
+        auroral_index : str
+            Target auroral index to predict.
+        schler : str
+            Learning rate scheduler to use (e.g., 'StepLR', 'ReduceLROnPlateau').
+        patience_schler : int
+            Number of epochs with no improvement before the scheduler reduces the learning rate.
+        device : str
+            Device to use for training ('cuda' or 'cpu').
+        model_file : str
+            Base path to save the trained model.
 
-    Return:
-        - model (nn.Module) : Trained model with the best weights.
-        - metrics_df (pd.DataFrame) : DataFrame with training and validation metrics history.
-        
-"""
+    Returns
+        model : nn.Module
+            Trained model with the best weights.
+        metrics_df : pd.DataFrame
+            DataFrame containing the training and validation metrics history.
+    """
 
     best_val_loss = float('inf')        # Initialize with infinite value
     best_model_wts = deepcopy(model.state_dict())        # Initial backup
@@ -226,23 +253,33 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH,
 #* Test Model
 def model_testing(model, criterion, test_loader, model_file, type_model, auroral_index, delay, test_epoch, device) :
     """
-    Function to evaluate a neural network model using a test dataset.
+    Evaluates a neural network model using a test dataset.
 
-    Args:
-        - model (nn.Module) : PyTorch model to be evaluated
-        - criterion (loss Function) : Loss Function
-        - test_loader (DataLoader) : DataLoader for test data
-        - model_file (str) : Base path to save the model
-        - type_model (str) : Architecture type
-        - auroral_index (str) : Target auroral index
-        - delay (int) : Time delay used in the data
-        - test_epoch (pd.DataFrane) : Time data from test data
-        - device (str) : Device to use ('cuda' or 'cpu')
+    Args
+        model : nn.Module
+            PyTorch model to be evaluated.
+        criterion : torch.nn.Module
+            Loss function used to compute the error.
+        test_loader : torch.utils.data.DataLoader
+            DataLoader for the test dataset.
+        model_file : str
+            Base path to save the evaluated model (if necessary).
+        type_model : str
+            Architecture type of the model (e.g., 'CNN', 'LSTM').
+        auroral_index : str
+            Target auroral index to predict.
+        delay : int
+            Time delay used in the data processing.
+        test_epoch : pd.DataFrame
+            Time data from the test dataset.
+        device : str
+            Device to use for evaluation ('cuda' or 'cpu').
 
-    Return:
-        - result_df (pd.DataFrame) : 
-        - metrics_df (pd.DataFrame) :
-
+    Returns
+        result_df : pd.DataFrame
+            DataFrame containing the results of the evaluation.
+        metrics_df : pd.DataFrame
+            DataFrame containing the evaluation metrics for the test dataset.
     """
     
     model.load_state_dict(torch.load(
@@ -279,6 +316,10 @@ def model_testing(model, criterion, test_loader, model_file, type_model, auroral
         'Real': real_tensor.numpy().flatten().tolist(),
         'Pred': pred_tensor.numpy().flatten().tolist()
     })
+
+    if auroral_index == 'AL_INDEX':
+        result_df['Real'] = -1 * result_df['Real']
+        result_df['Pred'] = -1 * result_df['Pred']
     
     return result_df, metrics_df
 

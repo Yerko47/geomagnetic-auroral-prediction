@@ -3,6 +3,7 @@ from folders import *
 from data_processing import *
 from models import *
 from model_training import *
+from plot import *
 
 
 def main():
@@ -13,8 +14,8 @@ def main():
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    structure_proyect(proyect_file, files)
-    df = dataset(in_year, out_year, omni_file, raw_file, processOMNI)
+    structure_proyect(project_file, files)
+    df = dataset(in_year, out_year, omni_files, raw_file, processOMNI)
     df = storm_selection(df, processed_file)
     df = scaler_df(df, scaler, auroral_param, omni_param)
 
@@ -44,10 +45,10 @@ def main():
             device, model_file
         )
                 
-        result_df, test_metrics = model_testing(model, criterion, test_loader, model_file, 
+        result_df, metric_test = model_testing(model, criterion, test_loader, model_file, 
                                                type_model, auroral_index, delay, test_epoch, device)
         result_df.to_feather(f"{test_file}results_delay_{delay}_{auroral_index}_{type_model}.feather")
-        test_metrics.to_csv(f"{test_file}metrics_delay_{delay}_{auroral_index}_{type_model}.csv")        
+        metric_test.to_csv(f"{test_file}metrics_delay_{delay}_{auroral_index}_{type_model}.csv")        
 
 
 if __name__ == '__main__':
