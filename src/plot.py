@@ -3,8 +3,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.colors import LogNorm
+from matplotlib.gridspec import GridSpec
+from matplotlib.dates import mdates
+from matplotlib.gridspec import GridSpec
 
-from sklearn.linear_model import LinearRegression
+import imageio.v2 as imageio
+from io import BytesIO
 
 
 #* Setup Axis Style
@@ -270,13 +274,13 @@ def correlation_plot(df, corr_file):
 
 
 #* Metrics Plot
-def metrics_plot(metrics_train_val, delay, auroral_index, type_model, train_loss_file, train_r_score_file):
+def metrics_plot(metrics_train_val, delay, auroral_index, type_model, train_loss_file, train_r_score_file, train_d2_abs_file, train_d2_tweedie_file):
     """
-    Generates and saves plots for RMSE and R-Squared metrics for training and validation datasets.
+    Generates and saves plots for RMSE, R-Squared, D² Absolute Error Score and D² Tweedie Score metrics for training and validation datasets.
 
     Args:
         metrics_train_val : pd.DataFrame
-            DataFrame containing the RMSE and R-Squared metrics for training and validation datasets.
+            DataFrame containing the RMSE, R-Squared, D² Absolute Error Score and D² Tweedie Score metrics for training and validation datasets.
         delay : int
             The delay parameter used in the model.
         auroral_index : str
@@ -287,92 +291,65 @@ def metrics_plot(metrics_train_val, delay, auroral_index, type_model, train_loss
             Path to the directory where RMSE plots will be saved.
         train_r_score_file : str
             Path to the directory where R-Squared plots will be saved.
+        train_d2_abs_file : str
+            Path to the directory where D² Absolute Error Score plots will be saved.
+        train_d2_tweedie_file : str
+            Path to the directory where D² Tweedie Score plots will be saved.
     """
-    metric_list = ['RMSE', 'R_Score']
+    metric_list = ['RMSE', 'R_Score', 'd2_abs', 'd2_tweedie']
 
     for metric in metric_list:
-        plt.figure(figsize = (12, 10))
-        title = f'{metric.replace('_', ' ').title()} for {auroral_index.replace('_INDEX', 'Index')} - {type_model} (Delay {delay})'
-        plt.title(title, fontsize = 20, fontweight = 'bold')
-
-        for cols in metrics_train_val.columns:
-            if metric in cols and ('Train' in cols or 'Valid' in cols):
-                metric_value = metrics_train_val[cols].values
-                color = 'teal' if 'Train' in cols else 'red'
-                label_name = 'Train' if 'Train' in cols else 'Valid'
-                plt.plot(metric_value, color = color, label = label_name, linewidth = 2)
+        plt.figure(figsize=(12, 10))
         
-        setup_axis_style(plt.gca(), xlabel = 'Epoch', ylabel = metric.replace('_', ' ').title(), ticksize = 12)
+        if 'd2' in metric:
+            title = f'{metric.replace("d2_", "D² ").title()} for {auroral_index.replace("_INDEX", "Index")} - {type_model} (Delay {delay})'
+        else:
+            title = f'{metric.replace("_", " ").title()} for {auroral_index.replace("_INDEX", "Index")} - {type_model} (Delay {delay})'
+        
+        plt.title(title, fontsize=20, fontweight='bold')
 
-        plt.legend(font_size = 15)
-        filname = f'{metric.replace('_', ' ')}_Plot_Train/Valid_{auroral_index.replace("_INDEX", "Index")}_{type_model}_(Delay_{delay}).png'
+        train_col = None
+        valid_col = None
+        
+        for cols in metrics_train_val.columns:
+            if metric in cols:
+                if 'Train' in cols:
+                    train_col = cols
+                elif 'Valid' in cols:
+                    valid_col = cols
+        
+        if train_col:
+            train_values = metrics_train_val[train_col].values
+            plt.plot(range(1, len(train_values) + 1), train_values, 
+                    color='teal', label='Train', linewidth=2)
+        
+        if valid_col:
+            valid_values = metrics_train_val[valid_col].values
+            plt.plot(range(1, len(valid_values) + 1), valid_values, 
+                    color='red', label='Valid', linewidth=2)
+        
+        y_name = metric.replace('d2_', 'D² ').title() if 'd2' in metric else metric.upper() if 'RMSE' in metric else metric.replace('_', ' ').title()
+
+        setup_axis_style(plt.gca(), xlabel='Epoch', ylabel = y_name, ticksize=10)
+
+        plt.legend(fontsize=15)
+        
+        filename = f'{metric}_Plot_Train_Valid_{auroral_index.replace("_INDEX", "")}_{type_model}_Delay_{delay}.png'
         
         if 'RMSE' in metric:
-            plt.savefig(train_loss_file + filname)
-        else:
-            plt.savefig(train_r_score_file + filname)
+            plt.savefig(train_loss_file + filename)
+        elif 'R_Score' in metric:
+            plt.savefig(train_r_score_file + filename)
+        elif 'd2_abs' in metric:
+            plt.savefig(train_d2_abs_file + filename)
+        elif 'd2_tweedie' in metric:
+            plt.savefig(train_d2_tweedie_file + filename)
+        
         plt.close()
 
 
-#* Density Plot
-def density_plot(metric_test, result_df, delay, test_density_file, auroral_index, type_model):
-    """
-    Generates and saves a density plot comparing the predicted and actual values of the auroral index.
-    This function graphs the entire test set, NOT USING sotrm_list.csv 
-
-    Args:
-        metric_test : pd.DataFrame
-            DataFrame containing the R-Squared metric for the test dataset.
-        result_df : pd.DataFrame
-            DataFrame containing the predicted and actual values of the auroral index.
-        delay : int
-            The delay parameter used in the model.
-        test_density_file : str
-            Path to the directory where density plots will be saved.
-        auroral_index : str
-            The name of the auroral index being predicted.
-        type_model : str
-            The type of model used for prediction.
-    """
-    r_score = metric_test['R_Score'].values[0]
-    k = int(0.01 * np.sqrt(len(result_df)))
-
-    if auroral_index == 'AL_INDEX':
-        result_df['Real'] = result_df['Real'] * -1
-        result_df['Pred'] = result_df['Pred'] * -1
-
-    np_log_real = np.log10(result_df['Real'].values + 1e-10)
-    np_log_pred = np.log10(result_df['Pred'].values + 1e-10)
-
-    p_min = min(min(np_log_real), min(np_log_pred))
-    p_max = max(max(np_log_real), max(np_log_pred))
-
-    plt.figure(figsize = (15, 12))
-    plt.title(f'Density Plot for {auroral_index.replace("_INDEX", "Index")} - {type_model} (Delay {delay})', fontsize = 20, fontweight = 'bold')
-
-    hist = plt.hist2d(np_log_real, np_log_pred, norm = LogNorm())
-    plt.plot([p_min, p_max], [p_min, p_max], color = 'black', linewidth = 2, label = f'R = {r_score:.2f}')
-
-    cbar = plt.colorbar(hist[3])
-    cbar.set_label('Density', rotation = -90, labelpad = 25, fontsize = 15, fontweight = 'bold')
-    cbar.ax.tick_params(labelsize = 15)
-
-    plt.xlabel('Log10(Real)', fontsize = 20)
-    plt.ylabel('Log10(Pred)', fontsize = 20)
-
-    plt.tick_params(axis = 'both', length = 7, width = 2, colors = 'black',
-                    grid_color = 'black', grid_alpha = 0.4, which = 'major', labelsize = 15)
-    
-    plt.legend(loc = 'best', fontsize = 15)
-    plt.grid(True)
-
-    filname = f'Density_Plot_{auroral_index.replace("_INDEX", "Index")}_{type_model}_(Delay_{delay}).png'
-    plt.savefig(test_density_file + filname)
-    plt.close()
-
-
 #* Delay Metrics Plot
-def delay_metrics_plot(metric_test, delay_length, auroral_index, type_model, test_loss_file, test_r_score_file):
+def delay_metrics_plot(metric_test, delay_length, auroral_index, type_model, test_loss_file, test_r_score_file, test_d2_abs_file, test_d2_tweedie_file):
     """
     Generates and saves plots metrics for different delays.
 
@@ -389,32 +366,286 @@ def delay_metrics_plot(metric_test, delay_length, auroral_index, type_model, tes
             Path to the directory where RMSE plots will be saved.
         test_r_score_file : str
             Path to the directory where R-Squared plots will be saved.
+        test_d2_abs_file : str
+            Path to the directory where D² Absolute Error Score plots will be saved.
+        test_d2_tweedie_file : str
+            Path to the directory where D² Tweedie Score plots will be saved.
     """
-    metrics = ['RMSE', 'R_Score']
+
+    metrics = ['RMSE', 'R_Score', 'd2_abs', 'd2_tweedie']
+    
     for metric in metrics:
         plt.figure(figsize=(10,6))
-        plt.title(f'Test {metric.replace('_',' ')} for different delays ({auroral_index.replace("_INDEX", "Index")}) - {type_model}', fontsize = 20, fontweight = 'bold')
-
-        metric_values = []
-        for cols in metric_test.columns:
-            if metric in cols:
-                metric_values = metric_test[cols].values
-                plt.plot(delay_length, metric_values, marker = 'o', color = 'teal', linewidth = 1.5, linestyle = 'dashed')
         
-        setup_axis_style(plt.gca(), xlabel = 'Delay', ylabel = metric.replace('_', ' '), xlabelsize = 20, ylabelsize = 20, ticksize = 15)
+        if 'd2' in metric:
+            title = f'{metric.replace("d2_", "D² ").title()} for different delays ({auroral_index.replace("_INDEX", "Index")}) - {type_model}'
+        else:
+            title = f'{metric.replace("_", " ").title()} for different delays ({auroral_index.replace("_INDEX", "Index")}) - {type_model}'
 
-        filname = f'{metric}_Compared_Test_{auroral_index.replace("_INDEX", "Index")}_{type_model}.png'
+        plt.title(title, fontsize=20, fontweight='bold')
+
+        train_cols = [col for col in metric_test.columns if metric in col and 'Train' in col]
+        valid_cols = [col for col in metric_test.columns if metric in col and 'Valid' in col]
+        
+        if train_cols:
+            plt.plot(delay_length, metric_test[train_cols].values, 
+                    marker='o', color='teal', linewidth=1.5, 
+                    linestyle='dashed', label='Train', markersize=8)
+        
+        if valid_cols:
+            plt.plot(delay_length, metric_test[valid_cols].values, 
+                    marker='D', color='red', linewidth=1.5, 
+                    linestyle='dashed', label='Valid', markersize=8)
+                    
+        plt.legend(fontsize=15)
+        
+        y_name = metric.replace('d2_', 'D² ').title() if 'd2' in metric else metric.upper() if 'RMSE' in metric else metric.replace('_', ' ').title()
+
+        setup_axis_style(plt.gca(), xlabel='Delay', ylabel=y_name, xlabelsize=15, ylabelsize=15, ticksize=10)
+
+        filename = f'{metric}_Compared_Test_{auroral_index.replace("_INDEX", "")}_{type_model}.png'
         
         if 'RMSE' in metric:
-            plt.savefig(test_loss_file + filname)
+            plt.savefig(test_loss_file + filename)
         elif 'R_Score' in metric:
-            plt.savefig(test_r_score_file + filname)
+            plt.savefig(test_r_score_file + filename)
+        elif 'd2_abs' in metric:
+            plt.savefig(test_d2_abs_file + filename)
+        elif 'd2_tweedie' in metric:
+            plt.savefig(test_d2_tweedie_file + filename)
 
         plt.close()
 
 
-#* Time Serie Test Plot    
-def time_serie_test_plot(result_df, delay, auroral_index, type_model, test):
+#* Density and History Plot
+def comparison_plot(result_file, processed_file, comparison_file, auroral_index, delay_length):
     """
-    
+    Generates and saves density and history plots comparing the predicted models values and real values of the auroral index.
+
+    Args:
+        result_file : str
+            Path to the directory containing the model results.
+        processed_file : str
+            Path to the directory containing the storm list CSV file.
+        comparison_file : str
+            Path to the directory where comparison plots will be saved.
+        auroral_index : str
+            The name of the auroral index being predicted.
+        delay_length : list
+            List of delay values used in the model.
     """
+
+    storm_list = load_storm_data(processed_file)
+    model_list = ['LSTM', 'CNN', 'ANN']
+
+    k = int(2 * np.sqrt(len(storm_list)))
+
+    for i, storm in enumerate(storm_list['Epoch']):
+        start_time = storm - pd.Timedelta('24h')
+        end_time = storm + pd.Timedelta('24h')
+
+        for delay in delay_length:
+            fig = plt.figure(figsize = (18,10))
+            fig.suptitle(f'Prediction from {start_time.strftime("%Y-%m-%d")} to {end_time.strftime("%Y-%m-%d")} for the {auroral_index.replace('_INDEX', ' Index')}', fontsize=15, fontweight='bold')
+            fig.subplots_adjust(top=0.92)
+            gs = GridSpec(2, 3, figure = fig, height_ratios = [1, 2])
+            gs.update(wspace = 0.3, hspace = 0.3)
+
+            model_data = {}
+
+            for j, model in enumerate(model_list):
+                result_file = f'{result_file}_results_delay_{delay}_{auroral_index}_{model}.feather'
+                metric_file = f'{result_file}_metrics_delay_{delay}_{auroral_index}_{model}.csv'
+
+                df = pd.read_feather(result_file)
+                df_metric = pd.read_csv(metric_file)
+
+                storm_df = df[(df['Epoch'] >= start_time) & (df['Epoch'] <= end_time)]
+                model_data[model] = storm_df
+
+                ax_hist = fig.add_subplot(gs[0, j])
+
+                real = np.log(np.abs(model_data[model][f'{auroral_index}_real'].values))
+                pred = np.log(np.abs(model_data[model][f'{auroral_index}_pred'].values))
+
+                h = ax_hist.hist2d(real, pred, bins = k, cmap = 'viridis', norm = LogNorm())
+
+                p_min = min(min(real), min(pred))
+                p_max = max(max(real), max(pred))   
+                ax_hist.plot([p_min, p_max], [p_min, p_max], color = 'black', linewidth = 2)
+
+                r = df_metric['R_Score'].values[0]
+
+                ax_hist.set_title(f'{model} - R = {r:.2f}', fontsize = 15, fontweight = 'bold')
+                setup_axis_style(ax_hist, xlabel = 'Log(Real)', ylabel = 'Log(Pred)', xlabelsize = 15, ylabelsize = 15, ticksize = 10)
+                ax_hist.grid(True)
+
+                cbar = plt.colorbar(h[3], ax=plt.gca(), pad=0.12)
+                cbar.set_label('Density', labelpad=7, fontsize=12)
+                cbar.ax.yaxis.set_label_position('left')
+            
+            ax_time = fig.add_subplot(gs[1, :])
+
+            if auroral_index == 'AL_INDEX':
+                model_data[model_list[0]][f'{auroral_index}_real'] = -1 * model_data[model_list[0]][f'{auroral_index}_real'] 
+
+            ax_time.plot(model_data[model_list[0]]['Epoch'], model_data[model_list[0]][f'{auroral_index}_real'], color = 'black', label = 'Real', linewidth = 1.5)
+
+            color_list = ['teal', 'red', 'green']
+            for j, model in enumerate(model_list):
+                ax_time.plot(model_data[model]['Epoch'], model_data[model][f'{auroral_index}_pred'], color = color_list[j], label = model, linewidth = 1.5)
+            
+            ax_time.set_xlim(start_time, end_time)
+            
+            ax_time.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+            plt.step(ax_time.xaxis.get_majorticklocs())
+
+            ax_time.set_title(f'Comparison of Models for {auroral_index.replace("_INDEX", " Index")} (Delay {delay} min)', fontsize = 10)
+            setup_axis_style(ax_time, xlabel = 'Date', ylabel = format_parameter_label(auroral_index), xlabelsize = 15, ylabelsize = 15, ticksize = 10)
+            ax_time.legend(loc = 'best')
+            ax_time.grid(True)
+
+            plt.tight_layout()
+
+            filname = f'Comparison_{auroral_index.replace("_INDEX", "Index")}_{start_time.strftime("%Y%m%d")}_{end_time.strftime("%Y%m%d")}_Delay_{delay}.png'
+
+            plt.savefig(comparison_file + filname)
+            plt.close()
+
+
+#* Gift Plot
+def gif_plot(result_file, processed_file, gifs_file, auroral_index, delay_length, frame_steps = 2):
+    """
+    Generates a GIF showing the temporal evolution of auroral index predictions for different models.
+
+    Args: 
+        result_file : str
+            Path to the directory containing the model results.
+        processed_file : str
+            Path to the directory containing the storm list CSV file.
+        gifs_file : str
+            Path to the directory where GIFs will be saved.
+        auroral_index : str
+            The name of the auroral index being predicted.
+        delay_length : list
+            List of delay values used in the model.
+        frame_steps : int, optional
+            Number of steps to skip between frames in the GIF (Default is 2).
+    """
+    storm_list = load_storm_data(processed_file)
+    model_list = ['LSTM', 'CNN', 'ANN']
+
+    k = int(2 * np.sqrt(len(storm_list)))
+
+    for i, storm in enumerate(storm_list['Epoch']):
+        start_time = storm - pd.Timedelta('24h')
+        end_time = storm + pd.Timedelta('24h')
+
+        for delay in delay_length:
+            model_data = {}
+
+            for model in model_list:
+                result_file = f'{result_file}_results_delay_{delay}_{auroral_index}_{model}.feather'
+                metric_file = f'{result_file}_metrics_delay_{delay}_{auroral_index}_{model}.csv'
+
+                df = pd.read_feather(result_file)
+                df_metric = pd.read_csv(metric_file)
+
+                storm_df = df[(df['Epoch'] >= start_time) & (df['Epoch'] <= end_time)]
+                model_data[model] = storm_df
+            
+                frames = []
+
+            all_timestamps = model_data['ANN']['Epoch'].values
+            frame_timestamps = all_timestamps[::frame_steps]
+
+            for i, current_time in enumerate(frame_timestamps):
+                current_time_pd = pd.Timestamp(current_time)
+
+                fig = plt.figure(figsize = (18,10))
+                fig.suptitle(f'Prediction from {start_time.strftime("%Y-%m-%d")} to {end_time.strftime("%Y-%m-%d")} for the {auroral_index.replace('_INDEX', ' Index')}', fontsize=15, fontweight='bold')
+                fig.subplots_adjust(top=0.92)
+                gs = GridSpec(2, 3, figure = fig, height_ratios = [1, 2])
+                gs.update(wspace = 0.3, hspace = 0.3)
+
+                for j, model in enumerate(model_list):
+                    ax_hist = fig.add_subplot(gs[0, j])
+
+                    current_data = model_data[model][model_data[model]['Epoch'] <= current_time_pd]
+
+                    if len(current_data) > 5:
+                        real = np.log(np.abs(model_data[model][f'{auroral_index}_real'].values))
+                        pred = np.log(np.abs(model_data[model][f'{auroral_index}_pred'].values))
+
+                        h = ax_hist.hist2d(real, pred, bins = k, cmap = 'viridis', norm = LogNorm())
+
+                        p_min = min(min(real), min(pred))
+                        p_max = max(max(real), max(pred))   
+                        ax_hist.plot([p_min, p_max], [p_min, p_max], color = 'black', linewidth = 2)
+
+                        r = df_metric['R_Score'].values[0]
+
+                        ax_hist.set_title(f'{model} - R = {r:.2f}', fontsize = 15, fontweight = 'bold')
+                        setup_axis_style(ax_hist, xlabel = 'Log(Real)', ylabel = 'Log(Pred)', xlabelsize = 15, ylabelsize = 15, ticksize = 10)
+                        ax_hist.grid(True)
+
+                        cbar = plt.colorbar(h[3], ax=plt.gca(), pad=0.12)
+                        cbar.set_label('Density', labelpad=7, fontsize=12)
+                        cbar.ax.yaxis.set_label_position('left')
+                    else:
+                        ax_hist.set_title(f'{model} - No Data', fontsize = 15, fontweight = 'bold')
+                    
+            ax_time = fig.add_subplot(gs[1, :])
+
+            if auroral_index == 'AL_INDEX':
+                model_data[model_list[0]][f'{auroral_index}_real'] = -1 * model_data[model_list[0]][f'{auroral_index}_real'] 
+
+            for j, model in enumerate(model_list):
+                current_data = model_data[model][model_data[model]['Epoch'] <= current_time_pd]
+            
+                if j == 0:
+                    ax_time.plot(current_data['Epoch'], current_data[f'{auroral_index}_real'], color = 'black', label = 'Real', linewidth = 1.5)
+                
+                color = ['teal', 'red', 'green'][j]
+                ax_time.plot(current_data['Epoch'], current_data[f'{auroral_index}_pred'], color = color, label = model, linewidth = 1.5)
+
+            ax_time.set_xlim(start_time, end_time)
+
+            ax_time.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+            plt.step(ax_time.xaxis.get_majorticklocs())
+
+            time_str = current_time_pd.strftime('%H:%M')
+            ax_time.text(0.5, 0.5, f'Time: {time_str}', transform=ax_time.transAxes, ha = 'center', fontsize = 12, bbox = dict(facecolor = 'white', alpha = 0.5))
+
+            ax_time.set_title(f'Temporal Evolution - {auroral_index.replace("_INDEX", " Index")} (Delay {delay} min)', fontsize = 10)
+            setup_axis_style(ax_time, xlabel = 'Date', ylabel = format_parameter_label(auroral_index), xlabelsize = 15, ylabelsize = 15, ticksize = 10)
+            ax_time.legend(loc = 'best')
+            ax_time.grid(True)
+
+            plt.tight_layout()
+
+            buf = BytesIO()
+            plt.savefig(buf, format = 'png', dpi = 150, bbox_inches = 'tight')
+            buf.seek(0)
+
+            frame = imageio.imread(buf)
+            frames.append(frame)
+
+            plt.close()
+        
+        filname = f'Temporal_evolution_{auroral_index.replace("_INDEX", "Index")}_{start_time.strftime("%Y%m%d")}_{end_time.strftime("%Y%m%d")}_Delay_{delay}.gif'
+        duration = 0.5 if len(frames) > 50 else 0.7
+        imageio.mimsave(gifs_file + filname, frames, duration = duration, loop = 0)
+
+
+
+
+ 
+
+
+
+
+
+
+
+

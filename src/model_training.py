@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from sklearn.metrics import root_mean_squared_error, r2_score
+from sklearn.metrics import root_mean_squared_error, r2_score, d2_absolute_error_score, d2_tweedie_score
 from src.models import ANN, CNN, LSTM
 
 
@@ -77,16 +77,27 @@ def metrics(real, pred) :
         r : float
             Coefficient of determination (R²) between the actual and predicted values, 
             ensured to be >= 0.
+        d2_absolute_loss : float
+            D² absolute error score between the actual and predicted values, 
+            ensured to be >= 0.
+        d2_tweedie_loss : float
+            D² Tweedie score between the actual and predicted values, 
+            ensured to be >= 0.
     """
 
     real_np = real.detach().cpu().numpy()
     pred_np = pred.detach().cpu().numpy()
 
     rmse = root_mean_squared_error(real_np, pred_np)
+    d2_absolute_loss = d2_absolute_error_score(real_np, pred_np)
+    d2_absolute_loss = d2_absolute_loss if d2_absolute_loss >= 0 else 0
+    d2_tweedie_loss = d2_tweedie_score(real_np, pred_np)
+    d2_tweedie_loss = d2_tweedie_loss if d2_tweedie_loss >= 0 else 0
+
     r2 = r2_score(real_np, pred_np)
     r = np.sqrt(abs(r2)) if r2 >= 0 else 0
 
-    return rmse, r
+    return rmse, r, d2_absolute_loss, d2_tweedie_loss
 
 
 #* Seed
@@ -103,9 +114,7 @@ def set_seed(s) :
 
 
 #* Train Model
-def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH,
-                lr, delay, type_model, auroral_index, schler, patience_schler, 
-                device, model_file = None) :
+def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH, lr, delay, type_model, auroral_index, schler, patience_schler, device, model_file = None, seed = 42):
     """
     Trains a PyTorch model with validation evaluation, saves the best model, and tracks metrics.
 
@@ -138,6 +147,8 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH,
             Device to use for training ('cuda' or 'cpu').
         model_file : str
             Base path to save the trained model.
+        seed : int
+            Seed value for random number generation (default: 42).
 
     Returns
         model : nn.Module
@@ -145,6 +156,7 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH,
         metrics_df : pd.DataFrame
             DataFrame containing the training and validation metrics history.
     """
+    set_seed(seed)      # Set random seed for reproducibility
 
     best_val_loss = float('inf')        # Initialize with infinite value
     best_model_wts = deepcopy(model.state_dict())        # Initial backup
@@ -168,8 +180,8 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH,
 
 
     metrics_history = {
-        'train_rmse': [], 'train_r': [], 
-        'val_rmse': [], 'val_r': []
+        'train_rmse': [], 'train_r': [], 'train_d2_abs': [], 'train_d2_tweedie': [],
+        'val_rmse': [], 'val_r': [], 'val_d2_abs': [], 'val_d2_tweedie': [],
                        }
         
     for epoch in range(EPOCH) :
@@ -224,20 +236,33 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH,
                            )
             
 
-        for metric, value in zip(['rmse', 'r'], train_metrics) :        # Update metrics history
+        for metric, value in zip(['rmse', 'r', 'd2_abs', 'd2_tweedie'], train_metrics) :        # Update metrics history
             metrics_history [f'train_{metric}'].append(value)
         
-        for metric, value in zip(['rmse', 'r'], val_metrics) :        # Update metrics history
+        for metric, value in zip(['rmse', 'r', 'd2_abs', 'd2_tweedie'], val_metrics) :        # Update metrics history
             metrics_history [f'val_{metric}'].append(value)
 
             
         if epoch % 10 == 0 or epoch == EPOCH - 1:
-            log_str = (
-             f"Epoch {epoch + 1:03d}/{EPOCH} | "
-             f"Train RMSE: {train_metrics[0]:.4f} | Train R: {train_metrics[1]:.4f} | "
-             f"Val RMSE: {val_metrics[0]:.4f} | Val R: {val_metrics[1]:.4f}"
+            header = f"\n{'='*40} Epoch {epoch + 1:03d}/{EPOCH} {'='*40}\n"
+
+            train_log = (
+                f"🔵 TRAIN: "
+                f"RMSE: {train_metrics[0]:.4f} | "
+                f"R: {train_metrics[1]:.4f} | "
+                f"D² abs: {train_metrics[2]:.4f} | "
+                f"D² tweedie: {train_metrics[3]:.4f}"
             )
-            print(log_str)
+            val_log = (
+                f"🟠 VALID: "
+                f"RMSE: {val_metrics[0]:.4f} | "
+                f"R: {val_metrics[1]:.4f} | "
+                f"D² abs: {val_metrics[2]:.4f} | "
+                f"D² tweedie: {val_metrics[3]:.4f}"
+            )
+            print(header)
+            print(train_log)
+            print(val_log)
 
                     
     model.load_state_dict(best_model_wts)        # Load the best weights into the final model            
@@ -302,13 +327,15 @@ def model_testing(model, criterion, test_loader, model_file, type_model, auroral
     real_tensor = torch.cat(all_real)
     pred_tensor = torch.cat(all_pred)
 
-    rmse, r = metrics(real_tensor, pred_tensor)
+    rmse, r, d2_abs, d2_tweedie = metrics(real_tensor, pred_tensor)
 
-    print(f'Test RMSE: {rmse:.4f}, Test R: {r:.4f}')
+    print(f'Test RMSE: {rmse:.4f}, Test R: {r:.4f}, Test D² abs: {d2_abs:.4f}, Test D² tweedie: {d2_tweedie:.4f}')
     
     metrics_df = pd.DataFrame({
         'Test_RMSE': [rmse],
-        'Test_R': [r]
+        'Test_R': [r],
+        'Test_D2_abs': [d2_abs],
+        'Test_D2_tweedie': [d2_tweedie]
     })
 
     result_df = pd.DataFrame({

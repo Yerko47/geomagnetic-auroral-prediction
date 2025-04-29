@@ -146,7 +146,7 @@ def scaler_df_testing(bad_data_testing):
     """
     Fixture for scaler_df function
     """
-    return scaler_df(bad_data_testing, scaler, auroral_param, omni_param)
+    return scaler_df(bad_data_testing, scaler_type, auroral_param, omni_param)
 
 
 #* Create set prediction Test
@@ -249,12 +249,12 @@ def test_scaler_df(scaler_df_testing, bad_data_testing):
 
     for param in scaler_df_testing.columns:
         if param in omni_param:
-            if scaler == 'robust':
+            if scaler_type == 'robust':
                 assert abs(scaler_df_testing[param].median()) < 0.5, f"{param} median should be close to 0 after robust scaling"
-            elif scaler == 'standard':
+            elif scaler_type == 'standard':
                 assert abs(scaler_df_testing[param].mean()) < 0.5, f"{param} mean should be close to 0 after standard scaling"
                 assert 0.5 < scaler_df_testing[param].std() < 1.5, f"{param} std should be close to 1 after standard scaling"
-            elif scaler == 'minmax':
+            elif scaler_type == 'minmax':
                 assert scaler_df_testing[param].min() >= -0.1, f"{param} min should be >= 0 after minmax scaling"
                 assert scaler_df_testing[param].max() <= 1.1, f"{param} max should be <= 1 after minmax scaling"
         else:

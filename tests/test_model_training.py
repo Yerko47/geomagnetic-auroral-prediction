@@ -74,11 +74,15 @@ def test_metrics():
     real = torch.tensor([[1.0], [2.0], [3.0], [4.0]], dtype=torch.float32)
     pred = torch.tensor([[1.1], [2.2], [2.7], [4.2]], dtype=torch.float32)
     
-    rmse, r = metrics(real, pred)
+    rmse, r, d2_abs, d2_tweedie = metrics(real, pred)
 
     assert isinstance(rmse,(float, int, np.float32)), "RMSE should be a float"
     assert isinstance(r, (float, int, np.float32)), "R should be a float"
+    assert isinstance(d2_abs, (float, int, np.float32)), "D² Abs should be a float"
+    assert isinstance(d2_tweedie, (float, int, np.float32)), "D² Tweedie should be a float"
     assert 0.0 <= r <= 1.0, "R should be between 0.0 and 1.0"
+    assert d2_abs <= 1.0, "D² Abs should be less than 1.0"
+    assert d2_tweedie <= 1.0, "D² Tweedie should be less than 1.0"
     assert 0.0 <= rmse, f"RMSE should be around 0.25, got {rmse}"
 
 
@@ -159,7 +163,7 @@ def test_train_model(processed_data_testing, DataTorch_testing, model_folder):
         trained_model, metrics_df = train_model(
             model = model,
             criterion = criterion,
-            optimizer = optimizer,
+            optimizer = optimizer_type,
             train_loader = DataTorch_testing[f'train_loader_{model_name}'],
             val_loader = DataTorch_testing[f'val_loader_{model_name}'],
             EPOCH = test_epoch,

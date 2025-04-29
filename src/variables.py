@@ -42,7 +42,7 @@ auroral_param = ['AE_INDEX',
 
 #* NEURAL NETWORK GENERAL PARAMETERS
 type_model = "LSTM"                       # ANN    |    LSTM    |    CNN    |    etc...
-scaler = "robust"                         # robust --> RobustScaler()    |   standard --> StandardScaler()    |   minmax --> MinMaxScaler()
+scaler_type = "robust"                         # robust --> RobustScaler()    |   standard --> StandardScaler()    |   minmax --> MinMaxScaler()
 delay_length = [30, 40, 50, 60]
 
 # Loader
@@ -56,7 +56,7 @@ EPOCH = 100
 lr = 1e-3
 patience = 20
 drop = 0.2
-optimizer = "Adam"                       # Adam --> optimizer.Adam()    |   SGD --> optimizer.SDG()
+optimizer_type = "Adam"                       # Adam --> optimizer.Adam()    |   SGD --> optimizer.SDG()
 schler = "Cosine"                       # Reduce --> lr.scheduler.ReduceLROnPlateau()    |   Cosine --> lr_scheduler.CosineAnnealingLR()
 patience_schler = 50
 
@@ -65,36 +65,53 @@ num_layer_lstm = 1
 kernel_cnn = 7 
 
 project_file = f'/home/yerko/Desktop/Projects/auroral_prediction/'
-omni_files = f'/data/omni/hro_1min/'
+omni_file = f'/data/omni/hro_1min/'
  
 files = ['data/raw/', 'data/processed/',
-        'models/', 'notebooks/',
-        'src/', 'tests/', 'docs/', 
-        'plots/']
+        'models/', 'models/results_csv/', 
+        'src/', 'tests/', 'docs/', 'plots/'
+        ]
 
 files_plots = ['historic/index/', 'historic/solar/', 'stadistics/correlation/',
-               'stadistics/others/', 'training/loss/', 'training/r_score/',
-               'test_plot/metrics/loss/', 'test_plot/metrics/r_score/', 
-               'test_plot/density/', 'test_plot/date/', 'comparison/', 
-               'gifs/']
+               'training/loss/', 'training/r_score/',
+               'training/d2_abs/', 'training/d2_tweedie/',
+               'test_plot/metrics/loss/', 'test_plot/metrics/r_score/',
+               'test_plot/metrics/d2_abs/', 'test_plot/metrics/d2_tweedie/', 
+               'comparison/', 'gifs/'
+               ]
 
+# Path general files
 raw_file = project_file + files[0]
 processed_file = project_file + files[1]
 model_file = project_file + files[2]
-test_file = project_file + files[5]
-plots_file = project_file + project_file[6]
+result_file = project_file + files[3]
+test_file = project_file + files[4]
+plots_file = project_file + project_file[5]
 
-auroral_historic_file = project_file + files_plots[0]
-solar_historic_file = project_file + files_plots[1]
-corr_file = project_file + files_plots[2]
-train_loss_file = project_file + files_plots[4]
-train_r_score_file = project_file + files_plots[5]
-test_loss_file = project_file + files_plots[6]
-test_r_score_file = project_file + files_plots[7]
-test_density_file = project_file + files_plots[8]
-test_date_file = project_file + files_plots[9]
-comparison_file = project_file + files_plots[10]
-gifs_file = project_file + files_plots[11]
+# Path historic data
+auroral_historic_file = plots_file + files_plots[0]
+solar_historic_file = plots_file + files_plots[1]
+
+# Path stadistics
+corr_file = plots_file + files_plots[2]
+
+# Path metrics training and validation process
+train_loss_file = plots_file + files_plots[3]
+train_r_score_file = plots_file + files_plots[4]
+train_d2_abs_file = plots_file + files_plots[5]
+train_d2_tweedie_file = plots_file + files_plots[6]
+
+# Path metrics for diferent delay length in test process
+test_loss_file = plots_file + files_plots[7]
+test_r_score_file = plots_file + files_plots[8]
+test_d2_abs_file = plots_file + files_plots[9]
+test_d2_tweedie_file = plots_file + files_plots[10]
+
+# Path test historic and density plots
+comparison_file = plots_file + files_plots[11]
+
+# Path gifs
+gifs_file = plots_file + files_plots[12]
 
 
 
@@ -102,3 +119,4 @@ gifs_file = project_file + files_plots[11]
 
 
 processOMNI = True
+processPLOT = True
