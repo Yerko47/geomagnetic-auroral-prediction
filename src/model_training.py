@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from sklearn.metrics import root_mean_squared_error, r2_score, d2_absolute_error_score, d2_tweedie_score
-from src.models import ANN, CNN, LSTM
+from models import ANN, CNN, LSTM
 
 
 #* Selection Model
@@ -180,8 +180,8 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH, lr
 
 
     metrics_history = {
-        'train_rmse': [], 'train_r': [], 'train_d2_abs': [], 'train_d2_tweedie': [],
-        'val_rmse': [], 'val_r': [], 'val_d2_abs': [], 'val_d2_tweedie': [],
+        'train_rmse': [], 'train_r_score': [], 'train_d2_abs': [], 'train_d2_tweedie': [],
+        'val_rmse': [], 'val_r_score': [], 'val_d2_abs': [], 'val_d2_tweedie': [],
                        }
         
     for epoch in range(EPOCH) :
@@ -236,10 +236,10 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, EPOCH, lr
                            )
             
 
-        for metric, value in zip(['rmse', 'r', 'd2_abs', 'd2_tweedie'], train_metrics) :        # Update metrics history
+        for metric, value in zip(['rmse', 'r_score', 'd2_abs', 'd2_tweedie'], train_metrics) :        # Update metrics history
             metrics_history [f'train_{metric}'].append(value)
         
-        for metric, value in zip(['rmse', 'r', 'd2_abs', 'd2_tweedie'], val_metrics) :        # Update metrics history
+        for metric, value in zip(['rmse', 'r_score', 'd2_abs', 'd2_tweedie'], val_metrics) :        # Update metrics history
             metrics_history [f'val_{metric}'].append(value)
 
             
@@ -329,13 +329,13 @@ def model_testing(model, criterion, test_loader, model_file, type_model, auroral
 
     rmse, r, d2_abs, d2_tweedie = metrics(real_tensor, pred_tensor)
 
-    print(f'Test RMSE: {rmse:.4f}, Test R: {r:.4f}, Test D² abs: {d2_abs:.4f}, Test D² tweedie: {d2_tweedie:.4f}')
+    print(f'\nTest RMSE: {rmse:.4f}, Test R: {r:.4f}, Test D² abs: {d2_abs:.4f}, Test D² tweedie: {d2_tweedie:.4f}\n')
     
     metrics_df = pd.DataFrame({
-        'Test_RMSE': [rmse],
-        'Test_R': [r],
-        'Test_D2_abs': [d2_abs],
-        'Test_D2_tweedie': [d2_tweedie]
+        'Test_rmse': [rmse],
+        'Test_r_score': [r],
+        'Test_d2_abs': [d2_abs],
+        'Test_d2_tweedie': [d2_tweedie]
     })
 
     result_df = pd.DataFrame({

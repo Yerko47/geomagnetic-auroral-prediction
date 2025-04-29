@@ -313,11 +313,10 @@ def time_delay(df, omni_param, auroral_index, delay, type_model, group):
         df_epoch : pd.DataFrame
             Only returned if group='test'. Contains time data.
     """
-
     df_solar = df[omni_param].copy()        # Targets
     df_index = df[auroral_index].copy().abs()        # Features
     np_index = df_index.to_numpy()
-    df_epoch = None
+    df_epoch = df['Epoch']
 
     if type_model == 'ANN':
         delay_columns = []
@@ -333,7 +332,7 @@ def time_delay(df, omni_param, auroral_index, delay, type_model, group):
         np_index = np_index[delay:]
 
         if group == 'test':
-            df_epoch = df['Epoch'].iloc[delay:].reset_index(drop=True).copy()
+            df_epoch = df_epoch.iloc[delay:].reset_index(drop=True).copy()
 
 
     elif type_model == 'LSTM':
@@ -342,7 +341,7 @@ def time_delay(df, omni_param, auroral_index, delay, type_model, group):
         np_index = np_index[delay - 1:]        # Target alignment
 
         if group == 'test':
-            df_epoch = df['Epoch'].iloc[delay - 1:].reset_index(drop=True).copy()        # Time data
+            df_epoch = df['Epoch'].iloc[delay - 1:].reset_index(drop=True).copy() 
 
 
     elif type_model == 'CNN':

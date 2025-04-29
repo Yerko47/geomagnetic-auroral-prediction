@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.colors import LogNorm
 from matplotlib.gridspec import GridSpec
-from matplotlib.dates import mdates
+from matplotlib import dates
 from matplotlib.gridspec import GridSpec
 
 import imageio.v2 as imageio
@@ -37,15 +37,15 @@ def setup_axis_style(ax, xlabel = None, ylabel = None, xlabelsize = 15, ylabelsi
     if xlabel:
         ax.set_xlabel(xlabel, fontsize = xlabelsize)
     if ylabel:
-        ax.set_ylabel(ylabel, labelpad = 30 ,fontsize = ylabelsize, va = 'center')
+        ax.set_ylabel(ylabel, labelpad = 30, fontsize = ylabelsize, va = 'center')
     
-    ax.tick_params(axis = 'both', length =7, width = 2, colors = 'black', 
+    ax.tick_params(axis = 'both', length = 7, width = 2, colors = 'black', 
                    grid_color = 'black', grid_alpha = 0.4 ,
                    which = 'major', labelsize = ticksize)
     ax.grid(True)
 
     if ylabel:
-        ax.yaxis.set_major_formatter(ticker.ScalarFormatter(useMathText=True))
+        ax.yaxis.set_major_formatter(ticker.ScalarFormatter(useMathText = True))
         ax.yaxis.get_major_formatter().set_powerlimits((-3, 4))
 
 
@@ -85,7 +85,7 @@ def format_parameter_label(param):
     elif 'Pressure' in param:
         return 'P' + r' [nPa]'
     elif 'flow_speed' in param:
-        return 'flow speed' + r' [km/s]'
+        return 'Q' + r' [km/s]'
     return param
 
 
@@ -181,39 +181,41 @@ def time_serie_plot(df, omni_param, auroral_param, processed_file, auroral_histo
     storm_list = load_storm_data(processed_file)
     df = df.set_index('Epoch')
 
-    for storm_date in storm_list:
+    for storm_date in storm_list['Epoch']:
         start_time = storm_date - pd.Timedelta('24h')
         end_time = storm_date + pd.Timedelta('24h')
 
         period_data = df[(df.index >= start_time) & (df.index <= end_time)]
 
-        fig_solar, axs_solar = plt.subplots(len(omni_param), 1, figsize = (12, 15), sharex = True, layout = 'constrained')
-        fig_solar.suptitle(f'Solar Parameters from {start_time} to {end_time}', fontsize = 18, fontweight = 'bold')
+        fig_solar, axs_solar = plt.subplots(len(omni_param), 1, figsize=(12, 15), sharex=True, layout='constrained')
+        gs = fig_solar.add_gridspec(len(omni_param), hspace = 0)
+        fig_solar.suptitle(f'Solar Parameters from {start_time} to {end_time}', fontsize=18, fontweight='bold')
+
 
         if len(omni_param) == 1:
             axs_solar = [axs_solar]
         
         for j, param in enumerate(omni_param):
-            axs_solar[j].plot(period_data[param], color = 'teal', zorder = 1, linewidth = 1.5)
-            setup_axis_style(axs_solar[j], ylabel = format_parameter_label(param))
+            axs_solar[j].plot(period_data[param], color='teal', zorder=1, linewidth=1.5)
+            setup_axis_style(axs_solar[j], ylabel=format_parameter_label(param))
             axs_solar[j].set_xlim(start_time, end_time)
 
-        axs_solar[-1].set_xlabel('Date', fontsize = 15)
+        axs_solar[-1].set_xlabel('Date', fontsize=15)
 
-        fig_auroral, axs_auroral = plt.subplot(len(auroral_param), 1, figsize = (12, 6), sharex = True, layout = 'constrained')
-        fig_auroral.suptitle(f'Auroral Parameters from {start_time} to {end_time}', fontsize = 18, fontweight = 'bold')
+        fig_auroral, axs_auroral = plt.subplots(len(auroral_param), 1, figsize=(12, 6), sharex=True, layout='constrained')
+        fig_auroral.suptitle(f'Auroral Parameters from {start_time} to {end_time}', fontsize=18, fontweight='bold')
 
         if len(auroral_param) == 1:
             axs_auroral = [axs_auroral]
 
         for j, param in enumerate(auroral_param):
-            axs_auroral[j].plot(period_data[param], color = 'teal', zorder = 1, linewidth = 1.5)
-            setup_axis_style(axs_auroral[j], ylabel = format_parameter_label(param))
+            axs_auroral[j].plot(period_data[param], color='teal', zorder=1, linewidth=1.5)
+            setup_axis_style(axs_auroral[j], ylabel=format_parameter_label(param))
             axs_auroral[j].set_xlim(start_time, end_time)
         
-        axs_auroral[-1].set_xlabel('Date', fontsize = 15)
+        axs_auroral[-1].set_xlabel('Date', fontsize=15)
 
-        plt.subplots_adjust(left = 0.15)
+        plt.subplots_adjust(left=0.15)
 
         filename_solar = f'Omni_Parameters_{start_time.strftime("%Y%m%d")}_{end_time.strftime("%Y%m%d")}.png'
         filename_auroral = f'Auroral_electrojet_index_{start_time.strftime("%Y%m%d")}_{end_time.strftime("%Y%m%d")}.png'
@@ -222,6 +224,7 @@ def time_serie_plot(df, omni_param, auroral_param, processed_file, auroral_histo
         fig_auroral.savefig(auroral_historic_file + filename_auroral)
         plt.close(fig_solar)
         plt.close(fig_auroral)
+
 
 
 #* Correlation Plot
@@ -296,15 +299,15 @@ def metrics_plot(metrics_train_val, delay, auroral_index, type_model, train_loss
         train_d2_tweedie_file : str
             Path to the directory where D² Tweedie Score plots will be saved.
     """
-    metric_list = ['RMSE', 'R_Score', 'd2_abs', 'd2_tweedie']
+    metric_list = ['rmse', 'r_score', 'd2_abs', 'd2_tweedie']
 
     for metric in metric_list:
         plt.figure(figsize=(12, 10))
         
         if 'd2' in metric:
-            title = f'{metric.replace("d2_", "D² ").title()} for {auroral_index.replace("_INDEX", "Index")} - {type_model} (Delay {delay})'
+            title = f'{metric.replace("d2_", "D² ").title()} for {auroral_index.replace("_INDEX", " Index")} - {type_model} (Delay {delay})'
         else:
-            title = f'{metric.replace("_", " ").title()} for {auroral_index.replace("_INDEX", "Index")} - {type_model} (Delay {delay})'
+            title = f'{metric.replace("_", " ").title()} for {auroral_index.replace("_INDEX", " Index")} - {type_model} (Delay {delay})'
         
         plt.title(title, fontsize=20, fontweight='bold')
 
@@ -313,7 +316,7 @@ def metrics_plot(metrics_train_val, delay, auroral_index, type_model, train_loss
         
         for cols in metrics_train_val.columns:
             if metric in cols:
-                if 'Train' in cols:
+                if 'rrain' in cols:
                     train_col = cols
                 elif 'Valid' in cols:
                     valid_col = cols
@@ -336,9 +339,9 @@ def metrics_plot(metrics_train_val, delay, auroral_index, type_model, train_loss
         
         filename = f'{metric}_Plot_Train_Valid_{auroral_index.replace("_INDEX", "")}_{type_model}_Delay_{delay}.png'
         
-        if 'RMSE' in metric:
+        if 'rmse' in metric:
             plt.savefig(train_loss_file + filename)
-        elif 'R_Score' in metric:
+        elif 'r_score' in metric:
             plt.savefig(train_r_score_file + filename)
         elif 'd2_abs' in metric:
             plt.savefig(train_d2_abs_file + filename)
@@ -372,42 +375,36 @@ def delay_metrics_plot(metric_test, delay_length, auroral_index, type_model, tes
             Path to the directory where D² Tweedie Score plots will be saved.
     """
 
-    metrics = ['RMSE', 'R_Score', 'd2_abs', 'd2_tweedie']
+    metrics = ['rmse', 'r_score', 'd2_abs', 'd2_tweedie']
     
     for metric in metrics:
         plt.figure(figsize=(10,6))
         
         if 'd2' in metric:
-            title = f'{metric.replace("d2_", "D² ").title()} for different delays ({auroral_index.replace("_INDEX", "Index")}) - {type_model}'
+            title = f'{metric.replace("d2_", "D² ").title()} for different delays ({auroral_index.replace("_INDEX", " Index")}) - {type_model}'
         else:
-            title = f'{metric.replace("_", " ").title()} for different delays ({auroral_index.replace("_INDEX", "Index")}) - {type_model}'
+            title = f'{metric.replace("_", " ").upper()} for different delays ({auroral_index.replace("_INDEX", " Index")}) - {type_model}'
 
         plt.title(title, fontsize=20, fontweight='bold')
 
-        train_cols = [col for col in metric_test.columns if metric in col and 'Train' in col]
-        valid_cols = [col for col in metric_test.columns if metric in col and 'Valid' in col]
+        test_cols = [col for col in metric_test.columns if metric in col and 'Test' in col]
         
-        if train_cols:
-            plt.plot(delay_length, metric_test[train_cols].values, 
-                    marker='o', color='teal', linewidth=1.5, 
-                    linestyle='dashed', label='Train', markersize=8)
         
-        if valid_cols:
-            plt.plot(delay_length, metric_test[valid_cols].values, 
-                    marker='D', color='red', linewidth=1.5, 
-                    linestyle='dashed', label='Valid', markersize=8)
+        if test_cols:
+            plt.plot(delay_length, metric_test[test_cols].values.flatten(), 
+                     marker='o', color='teal', linewidth=1.5, 
+                     linestyle='dashed', markersize=8)
                     
-        plt.legend(fontsize=15)
         
-        y_name = metric.replace('d2_', 'D² ').title() if 'd2' in metric else metric.upper() if 'RMSE' in metric else metric.replace('_', ' ').title()
+        y_name = metric.replace('d2_', 'D² ').title() if 'd2' in metric else metric.upper() if 'rmse' in metric else metric.replace('_', ' ').title()
 
         setup_axis_style(plt.gca(), xlabel='Delay', ylabel=y_name, xlabelsize=15, ylabelsize=15, ticksize=10)
 
         filename = f'{metric}_Compared_Test_{auroral_index.replace("_INDEX", "")}_{type_model}.png'
         
-        if 'RMSE' in metric:
+        if 'rmse' in metric:
             plt.savefig(test_loss_file + filename)
-        elif 'R_Score' in metric:
+        elif 'r_score' in metric:
             plt.savefig(test_r_score_file + filename)
         elif 'd2_abs' in metric:
             plt.savefig(test_d2_abs_file + filename)
@@ -446,7 +443,8 @@ def comparison_plot(result_file, processed_file, comparison_file, auroral_index,
 
         for delay in delay_length:
             fig = plt.figure(figsize = (18,10))
-            fig.suptitle(f'Prediction from {start_time.strftime("%Y-%m-%d")} to {end_time.strftime("%Y-%m-%d")} for the {auroral_index.replace('_INDEX', ' Index')}', fontsize=15, fontweight='bold')
+            title = f'Prediction from {start_time.strftime("%Y-%m-%d")} to {end_time.strftime("%Y-%m-%d")} for the {auroral_index.replace("_INDEX", " Index")}'
+            fig.suptitle(title, fontsize=15, fontweight='bold')
             fig.subplots_adjust(top=0.92)
             gs = GridSpec(2, 3, figure = fig, height_ratios = [1, 2])
             gs.update(wspace = 0.3, hspace = 0.3)
@@ -497,7 +495,7 @@ def comparison_plot(result_file, processed_file, comparison_file, auroral_index,
             
             ax_time.set_xlim(start_time, end_time)
             
-            ax_time.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+            ax_time.xaxis.set_major_formatter(dates.DateFormatter('%H:%M'))
             plt.step(ax_time.xaxis.get_majorticklocs())
 
             ax_time.set_title(f'Comparison of Models for {auroral_index.replace("_INDEX", " Index")} (Delay {delay} min)', fontsize = 10)
@@ -563,7 +561,8 @@ def gif_plot(result_file, processed_file, gifs_file, auroral_index, delay_length
                 current_time_pd = pd.Timestamp(current_time)
 
                 fig = plt.figure(figsize = (18,10))
-                fig.suptitle(f'Prediction from {start_time.strftime("%Y-%m-%d")} to {end_time.strftime("%Y-%m-%d")} for the {auroral_index.replace('_INDEX', ' Index')}', fontsize=15, fontweight='bold')
+                title = f'Prediction from {start_time.strftime("%Y-%m-%d")} to {end_time.strftime("%Y-%m-%d")} for the {auroral_index.replace("_INDEX", " Index")}'
+                fig.suptitle(title, fontsize=15, fontweight='bold')
                 fig.subplots_adjust(top=0.92)
                 gs = GridSpec(2, 3, figure = fig, height_ratios = [1, 2])
                 gs.update(wspace = 0.3, hspace = 0.3)
@@ -611,7 +610,7 @@ def gif_plot(result_file, processed_file, gifs_file, auroral_index, delay_length
 
             ax_time.set_xlim(start_time, end_time)
 
-            ax_time.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+            ax_time.xaxis.set_major_formatter(dates.DateFormatter('%H:%M'))
             plt.step(ax_time.xaxis.get_majorticklocs())
 
             time_str = current_time_pd.strftime('%H:%M')

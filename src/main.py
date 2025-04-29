@@ -30,7 +30,7 @@ def main():
 
     #* Create Dataset
     df_scaler = scaler_df(df_storms, scaler_type, auroral_param, omni_param)
-    train_df, val_df, test_df = create_set_prediction(df, set_split, test_size, val_size)
+    train_df, val_df, test_df = create_set_prediction(df_scaler, set_split, test_size, val_size)
 
     del df, df_storms, df_scaler
 
@@ -64,6 +64,7 @@ def main():
         result_df.to_feather(f'{result_file}result_delay_{delay}_{auroral_index}_{type_model}.feather')
         metric_test.to_csv(f'{result_file}metrics_delay_{delay}_{auroral_index}_{type_model}.csv')
 
+        metric_test = metric_test.rename(columns={col: f"{col}_{delay}" for col in metric_test.columns})
         metric_test_delay = pd.concat([metric_test_delay, metric_test], axis = 1, ignore_index = False)
 
     delay_metrics_plot(metric_test_delay, delay_length, auroral_index, type_model, test_loss_file, test_r_score_file, test_d2_abs_file, test_d2_tweedie_file)

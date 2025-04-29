@@ -12,7 +12,7 @@ auroral_index = "AL_INDEX"                  # AE_INDEX    |    AL_INDEX    |    
 
 
 #* SPLIT TRAIN/VAL/TEST SET
-set_split = "random"                     # organized --> Temporary order    |    random --> Stratified random split
+set_split = "organized"                     # organized --> Temporary order    |    random --> Stratified random split
 
 test_size = 0.2
 val_size = 0.2
@@ -41,9 +41,9 @@ auroral_param = ['AE_INDEX',
 
 
 #* NEURAL NETWORK GENERAL PARAMETERS
-type_model = "LSTM"                       # ANN    |    LSTM    |    CNN    |    etc...
+type_model = "ANN"                       # ANN    |    LSTM    |    CNN    |    etc...
 scaler_type = "robust"                         # robust --> RobustScaler()    |   standard --> StandardScaler()    |   minmax --> MinMaxScaler()
-delay_length = [30, 40, 50, 60]
+delay_length = [2, 4]
 
 # Loader
 n = 2
@@ -52,12 +52,12 @@ batch_val = batch_test * n
 batch_train = batch_test * n
 
 # Hyperparametrs
-EPOCH = 100
+EPOCH = 2
 lr = 1e-3
 patience = 20
 drop = 0.2
 optimizer_type = "Adam"                       # Adam --> optimizer.Adam()    |   SGD --> optimizer.SDG()
-schler = "Cosine"                       # Reduce --> lr.scheduler.ReduceLROnPlateau()    |   Cosine --> lr_scheduler.CosineAnnealingLR()
+schler = "Reduce"                       # Reduce --> lr.scheduler.ReduceLROnPlateau()    |   Cosine --> lr_scheduler.CosineAnnealingLR()
 patience_schler = 50
 
 # NN particular parameters
@@ -86,32 +86,32 @@ processed_file = project_file + files[1]
 model_file = project_file + files[2]
 result_file = project_file + files[3]
 test_file = project_file + files[4]
-plots_file = project_file + project_file[5]
+plot_file = project_file + files[7]
 
 # Path historic data
-auroral_historic_file = plots_file + files_plots[0]
-solar_historic_file = plots_file + files_plots[1]
+auroral_historic_file = plot_file + files_plots[0]
+solar_historic_file = plot_file + files_plots[1]
 
 # Path stadistics
-corr_file = plots_file + files_plots[2]
+corr_file = plot_file + files_plots[2]
 
 # Path metrics training and validation process
-train_loss_file = plots_file + files_plots[3]
-train_r_score_file = plots_file + files_plots[4]
-train_d2_abs_file = plots_file + files_plots[5]
-train_d2_tweedie_file = plots_file + files_plots[6]
+train_loss_file = plot_file + files_plots[3]
+train_r_score_file = plot_file + files_plots[4]
+train_d2_abs_file = plot_file + files_plots[5]
+train_d2_tweedie_file = plot_file + files_plots[6]
 
 # Path metrics for diferent delay length in test process
-test_loss_file = plots_file + files_plots[7]
-test_r_score_file = plots_file + files_plots[8]
-test_d2_abs_file = plots_file + files_plots[9]
-test_d2_tweedie_file = plots_file + files_plots[10]
+test_loss_file = plot_file + files_plots[7]
+test_r_score_file = plot_file + files_plots[8]
+test_d2_abs_file = plot_file + files_plots[9]
+test_d2_tweedie_file = plot_file + files_plots[10]
 
 # Path test historic and density plots
-comparison_file = plots_file + files_plots[11]
+comparison_file = plot_file + files_plots[11]
 
 # Path gifs
-gifs_file = plots_file + files_plots[12]
+gifs_file = plot_file + files_plots[12]
 
 
 

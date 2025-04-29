@@ -31,8 +31,8 @@ def structure_proyect(proyect_file, files_plots, files):
         
 
 
-project_file = Path(__file__).resolve().parent.parent
+#project_file = Path(__file__).resolve().parent.parent
 
 
 
-structure_proyect(project_file, files_plots, files)
+#structure_proyect(project_file, files_plots, files)
